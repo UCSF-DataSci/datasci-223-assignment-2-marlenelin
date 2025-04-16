@@ -40,6 +40,7 @@ Usage:
 
 import json
 import os
+import pandas as pd
 
 def load_patient_data(filepath):
     """
@@ -51,30 +52,32 @@ def load_patient_data(filepath):
     Returns:
         list: List of patient dictionaries
     """
-    with open(filepath, 'r') as file:
-        return json.load(file)
+    # BUG: No error handling for file not found
+    try:
+        with open(filepath, 'r') as file:
+            json_file = json.load(file)
+            return pd.DataFrame(json_file)
+    except:
+        return("No file found")
 
-def clean_patient_data(data: dict) -> dict:
-    """
-    Clean and validate patient data.
-    
-    Args:
-        data: Dictionary containing patient information
-        
-    Returns:
-        Cleaned patient data dictionary
-    """
-    # TODO: Fix the bugs in this function
-    # Hint: Look for these common issues:
-    # 1. Type conversion errors (str vs int)
-    # 2. Missing key checks
-    # 3. Invalid value ranges
-    # 4. Incorrect string operations
-    
-    # BUG: Add your bug description here
-    # FIX: Add your fix description here
-    
-    return data
+def clean_patient_data(patients):
+    # Convert list of dicts to DataFrame
+    df = pd.DataFrame(patients)
+
+    # Standardize and clean
+    df['name'] = df['name'].str.title()
+    df['age'] = pd.to_numeric(df['age'], errors='coerce').fillna(0).astype(int)
+
+    # Filter patients age 18+
+    df = df[df['age'] >= 18]
+
+    # Drop duplicate rows
+    df = df.drop_duplicates()
+
+    # Convert back to list of dicts
+    cleaned_patients = df.to_dict(orient='records')
+
+    return cleaned_patients if cleaned_patients else None
 
 def main():
     """Main function to run the script."""
@@ -83,18 +86,24 @@ def main():
     
     # Construct the path to the data file
     data_path = os.path.join(script_dir, 'data', 'raw', 'patients.json')
-    
-    # Load the patient data
-    patients = load_patient_data(data_path)
+    print(data_path)
+    # BUG: No error handling for load_patient_data failure
+    try:
+        patients = load_patient_data(data_path)
+    except:
+        exit("load data failed")
     
     # Clean the patient data
     cleaned_patients = clean_patient_data(patients)
-    
-    # Print the cleaned patient data
-    print("Cleaned Patient Data:")
-    for patient in cleaned_patients:
-        print(f"Name: {patient['name']}, Age: {patient['age']}, Diagnosis: {patient['diagnosis']}")
-    
+    if cleaned_patients is not None:
+        # BUG: No check if cleaned_patients is None
+        # Print the cleaned patient data
+        print("Cleaned Patient Data:")
+        for patient in cleaned_patients:
+            # BUG: Using 'name' key but we changed it to 'nage'
+            print(f"Name: {patient['name']}, Age: {patient['age']}, Diagnosis: {patient['diagnosis']}")
+    else:
+        print('No qualified patients')
     # Return the cleaned data (useful for testing)
     return cleaned_patients
 
